@@ -14,6 +14,10 @@ import { Input } from "@/components/ui/input";
 // Supabse
 import supabase from "@/utils/supabase";
 
+// Store
+import { useAuthStore } from "@/store/authStore";
+import { Button } from "@/components/ui/button";
+
 export enum ProgressStatus {
   // SELECT = "진행 상태 선택",
   BEFORE = "진행 전",
@@ -29,13 +33,16 @@ function Home() {
   const [progressStatus, setProgressStatus] = useState<ProgressStatus>(
     ProgressStatus.BEFORE
   );
-
   const [progressRate, setProgressRate] = useState<number>(0);
   const [memberCount, setMemberCount] = useState<number>(0);
   const [deadline, setDeadline] = useState<Date | undefined>(undefined);
 
+  // const token = useAuthStore((state) => state.token);
+  const { token } = useAuthStore();
+  const [isMyPosts, setIsMyPosts] = useState<boolean>(true);
+
   const onCreate = async () => {
-    let memberAvatar = [];
+    let memberAvatar: string[] = [];
 
     switch (true) {
       case memberCount >= 3:
@@ -63,53 +70,77 @@ function Home() {
         memberAvatar = [""];
     }
 
-    const { error, status } = await supabase.from("tasks").insert([
-      {
-        title: title,
-        description: description,
-        progress_status: progressStatus,
-        progress_rate: progressRate,
-        member_count: memberCount,
-        deadline: deadline,
+    const user = await supabase.auth.getUser();
 
-        created_at: new Date(),
-        member_avatar: memberAvatar,
-      },
-    ]);
-
-    if (error) {
-      console.log(error);
+    if (user.data.user) {
+      insertData(user.data.user.id);
+    } else {
+      insertData();
     }
 
-    if (status === 201) {
-      // console.log("생성 완료");
-      getDashboardTasks();
-      setOpen(false);
-      setTitle("");
-      setDescription("");
-      setProgressStatus(ProgressStatus.BEFORE);
-      setProgressRate(0);
-      setMemberCount(0);
-      setDeadline(undefined);
+    async function insertData(userId: string | null = null) {
+      const { error, status } = await supabase.from("tasks").insert([
+        {
+          title: title,
+          description: description,
+          progress_status: progressStatus,
+          progress_rate: progressRate,
+          member_count: memberCount,
+          deadline: deadline,
+
+          created_at: new Date(),
+          member_avatar: memberAvatar,
+          user_id: userId,
+        },
+      ]);
+
+      if (error) {
+        console.log(error);
+      }
+
+      if (status === 201) {
+        // console.log("생성 완료");
+        getDashboardTasks();
+        setOpen(false);
+        setTitle("");
+        setDescription("");
+        setProgressStatus(ProgressStatus.BEFORE);
+        setProgressRate(0);
+        setMemberCount(0);
+        setDeadline(undefined);
+      }
     }
   };
 
-  const getDashboardTasks = async () => {
-    const { data, error, status } = await supabase.from("tasks").select("*");
+  const getDashboardTasks = async (myPost = false) => {
+    // const user = supabase.auth.getUser();
+    const { data: user } = await supabase.auth.getUser();
 
-    if (error) {
-      console.log(error);
-    }
+    console.log("user", user);
 
-    if (status === 200) {
-      // console.log("data", data);
-      setTasks(data);
+    try {
+      let query = supabase.from("tasks").select("*");
+
+      if (myPost && user && user.user) {
+        query = query.eq("user_id", user.user.id);
+      }
+
+      const { data, error } = await query;
+
+      if (error) {
+        console.error("게시물 조회 오류:", error);
+      } else {
+        console.log(myPost ? "나의 게시물:" : "전체 게시물:", data);
+        setTasks(data);
+      }
+    } catch (err) {
+      console.error("오류 발생:", err);
     }
   };
 
   useEffect(() => {
     getDashboardTasks();
-  }, []);
+  }, [token]);
 
   return (
     <div className="w-full h-[93vh] bg-gray-50">
@@ -121,6 +152,22 @@ function Home() {
             className="rounded-md"
             placeholder="프로젝트 검색"
           />
+
+          {token && (
+            <Button
+              className={`${
+                isMyPosts
+                  ? "bg-teal-500 hover:bg-teal-500"
+                  : "bg-teal-600 hover:bg-teal-600"
+              } mr-3 font-bold`}
+              onClick={() => {
+                getDashboardTasks(isMyPosts);
+                setIsMyPosts(!isMyPosts);
+              }}
+            >
+              {isMyPosts ? "나의 프로젝트" : "전체 프로젝트"}
+            </Button>
+          )}
 
           <DashboardDialog
             open={open}
@@ -140,6 +187,7 @@ function Home() {
             onCreate={onCreate}
           />
         </div>
+
         {tasks?.map((task: Tasks) => {
           return <DashboardCard key={task.id} data={task} />;
         })}

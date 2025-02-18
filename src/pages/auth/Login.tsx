@@ -4,19 +4,25 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import supabase from "@/utils/supabase";
 // import type { AuthInputs } from "./types";
 
+// Store
+import { useAuthStore } from "@/store/authStore";
+
 export interface AuthInputs {
-  username: string;
+  email: string;
   password: string;
 }
 
 function Login() {
   const navigate = useNavigate();
   const [formData, setFormData] = useState<AuthInputs>({
-    username: "",
+    email: "",
     password: "",
   });
+  const setToken = useAuthStore((state) => state.setToken);
+  const [error, setError] = useState<string>("");
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -28,6 +34,28 @@ function Login() {
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email: formData.email,
+      password: formData.password,
+    });
+
+    if (error) {
+      console.log("error", error);
+      setError("아이디나 비밀번호를 확인하세요");
+      return;
+    }
+
+    if (data) {
+      console.log("로그인 성공");
+      console.log("data", data);
+
+      setToken(data.session.access_token /* , data.session.user.id */);
+
+      navigate("/");
+      return;
+    }
+
     // 로그인 로직 구현
     console.log("Login attempt:", formData);
   };
@@ -48,14 +76,14 @@ function Login() {
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="space-y-2">
-              <Label htmlFor="username">아이디</Label>
+              <Label htmlFor="email">아이디</Label>
               <Input
-                id="username"
-                name="username"
-                type="text"
+                id="email"
+                name="email"
+                type="email"
                 required
                 placeholder="아이디를 입력하세요"
-                value={formData.username}
+                value={formData.email}
                 onChange={handleChange}
                 className="w-full"
               />
@@ -73,6 +101,9 @@ function Login() {
                 className="w-full"
               />
             </div>
+            {error && (
+              <div className="text-red-500 text-sm text-center">{error}</div>
+            )}
             <Button
               type="submit"
               className="w-full bg-emerald-500 hover:bg-emerald-500"

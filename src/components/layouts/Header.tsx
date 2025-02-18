@@ -1,8 +1,18 @@
-import { FaBell, /* FaUserCircle, */ FaSignInAlt } from "react-icons/fa";
+import {
+  FaBell,
+  /* FaUserCircle, */ FaSignInAlt,
+  FaSignOutAlt,
+} from "react-icons/fa";
 import { useNavigate } from "react-router-dom";
+import { useAuthStore } from "@/store/authStore";
 
 function Header() {
   const navigate = useNavigate();
+  const { token, logout } = useAuthStore();
+
+  const handleLogout = () => {
+    logout();
+  };
 
   return (
     <header className="w-full bg-white shadow-sm border-b border-gray-300">
@@ -34,12 +44,19 @@ function Header() {
           {/* 프로필 이미지 */}
           <div className="relative w-8 h-8">
             <div className="h-full flex items-center justify-center">
-              <FaSignInAlt
-                className="text-gray-300 cursor-pointer"
-                onClick={() => {
-                  navigate("/login");
-                }}
-              />
+              {token ? (
+                <FaSignOutAlt
+                  className="text-red-500 cursor-pointer"
+                  onClick={handleLogout}
+                />
+              ) : (
+                <FaSignInAlt
+                  className="text-blue-500 cursor-pointer"
+                  onClick={() => {
+                    navigate("/login");
+                  }}
+                />
+              )}
             </div>
             {/* <FaUserCircle className="w-full h-full text-gray-300" /> */}
             {/* 로그인 시 표시 */}

@@ -5,6 +5,7 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { AuthInputs } from "./Login";
+import supabase from "@/utils/supabase";
 // import type { RegisterInputs } from "./types";
 
 interface RegisterInputs extends AuthInputs {
@@ -14,7 +15,7 @@ interface RegisterInputs extends AuthInputs {
 function Register() {
   const navigate = useNavigate();
   const [formData, setFormData] = useState<RegisterInputs>({
-    username: "",
+    email: "",
     password: "",
     passwordConfirm: "",
   });
@@ -39,6 +40,30 @@ function Register() {
       return;
     }
 
+    const { data, error } = await supabase.auth.signUp({
+      email: formData.email,
+      password: formData.password,
+      options: {
+        // username을 raw_user_meta_data 안에 저장
+        data: {
+          // username: formData.username,
+          username: "data",
+        },
+      },
+    });
+
+    if (data) {
+      console.log("회원가입 성공", data);
+
+      navigate("/login");
+      return;
+    }
+
+    if (error) {
+      console.log("error", error);
+      return;
+    }
+
     // 회원가입 로직 구현
     console.log("Register attempt:", formData);
   };
@@ -54,14 +79,14 @@ function Register() {
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="space-y-2">
-              <Label htmlFor="username">아이디</Label>
+              <Label htmlFor="email">아이디</Label>
               <Input
-                id="username"
-                name="username"
-                type="text"
+                id="email"
+                name="email"
+                type="email"
                 required
                 placeholder="아이디를 입력하세요"
-                value={formData.username}
+                value={formData.email}
                 onChange={handleChange}
                 className="w-full"
               />

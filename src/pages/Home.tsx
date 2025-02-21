@@ -1,22 +1,22 @@
+// Supabse
+import supabase from "@/utils/supabase";
+
 // Hooks
 import { useEffect, useState } from "react";
 
 // Types
 import { Tasks } from "@/types";
 
+// Shadcn UI
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+
 // Components
 import DashboardCard from "@/components/card/DashboardCard";
 import DashboardDialog from "@/components/dialog/DashboardDialog";
 
-// Shadcn
-import { Input } from "@/components/ui/input";
-
-// Supabse
-import supabase from "@/utils/supabase";
-
 // Store
 import { useAuthStore } from "@/store/authStore";
-import { Button } from "@/components/ui/button";
 
 export enum ProgressStatus {
   // SELECT = "진행 상태 선택",
@@ -40,6 +40,10 @@ function Home() {
   // const token = useAuthStore((state) => state.token);
   const { token } = useAuthStore();
   const [isMyPosts, setIsMyPosts] = useState<boolean>(true);
+
+  const [usernameList, setUsernameList] = useState<{ username: string }[]>([]);
+  const [username, setUsername] = useState("");
+  const [selectedUsernames, setSelectedUsernames] = useState<string[]>([]);
 
   const onCreate = async () => {
     let memberAvatar: string[] = [];
@@ -91,6 +95,8 @@ function Home() {
           created_at: new Date(),
           member_avatar: memberAvatar,
           user_id: userId,
+
+          member_names: selectedUsernames,
         },
       ]);
 
@@ -116,7 +122,7 @@ function Home() {
     // const user = supabase.auth.getUser();
     const { data: user } = await supabase.auth.getUser();
 
-    console.log("user", user);
+    // console.log("user", user);
 
     try {
       let query = supabase.from("tasks").select("*");
@@ -136,6 +142,9 @@ function Home() {
     } catch (err) {
       console.error("오류 발생:", err);
     }
+
+    const { data } = await supabase.from("users").select("username");
+    setUsernameList(data || []);
   };
 
   useEffect(() => {
@@ -185,6 +194,11 @@ function Home() {
             deadline={deadline}
             setDeadline={setDeadline}
             onCreate={onCreate}
+            usernameList={usernameList}
+            username={username}
+            setUsername={setUsername}
+            selectedUsernames={selectedUsernames}
+            setSelectedUsernames={setSelectedUsernames}
           />
         </div>
 

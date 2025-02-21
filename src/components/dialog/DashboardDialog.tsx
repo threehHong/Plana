@@ -50,6 +50,12 @@ interface DashboardDialogProps {
   setMemberCount: (count: number) => void;
   deadline: Date | undefined;
   setDeadline: (date?: Date) => void;
+
+  usernameList: { username: string }[];
+  username: string;
+  setUsername: (username: string) => void;
+  selectedUsernames: string[];
+  setSelectedUsernames: React.Dispatch<React.SetStateAction<string[]>>;
 }
 
 function DashboardDialog({
@@ -69,8 +75,22 @@ function DashboardDialog({
   setMemberCount,
   deadline,
   setDeadline,
+
+  usernameList,
+  username,
+  setUsername,
+  selectedUsernames,
+  setSelectedUsernames,
 }: DashboardDialogProps) {
   const [calendarOpen, setCalendarOpen] = useState<boolean>(false);
+  const handleUsernameChange = (value: string) => {
+    if (selectedUsernames.includes(value)) {
+      setSelectedUsernames(selectedUsernames.filter((user) => user !== value));
+    } else {
+      setSelectedUsernames([...selectedUsernames, value]);
+    }
+    setUsername(value);
+  };
 
   return (
     <Dialog open={open} onOpenChange={setOpen} modal={false}>
@@ -129,6 +149,25 @@ function DashboardDialog({
                   진행 중
                 </SelectItem>
                 <SelectItem value={ProgressStatus.COMPLETED}>완료</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="grid gap-2">
+            <Label htmlFor="team">팀원</Label>
+            <Select value={username} onValueChange={handleUsernameChange}>
+              <SelectTrigger id="team">
+                <SelectValue placeholder="팀원 선택">
+                  {selectedUsernames.length > 0 && selectedUsernames.join(", ")}
+                </SelectValue>
+              </SelectTrigger>
+              <SelectContent>
+                {usernameList?.map((user, index) => (
+                  <SelectItem key={index} value={user.username}>
+                    {user.username}
+                    {selectedUsernames.includes(user.username) ? " ✅" : null}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>

@@ -1,21 +1,32 @@
+// Hooks
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+
+// Shadcn UI
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+
+// Components
 import { AuthInputs } from "./Login";
+
+// Supabse
 import supabase from "@/utils/supabase";
 // import type { RegisterInputs } from "./types";
 
 interface RegisterInputs extends AuthInputs {
+  username: string;
   passwordConfirm: string;
 }
 
 function Register() {
   const navigate = useNavigate();
+  const [isSignedUp, setIsSignedUp] = useState(false); // 회원가입 상태 관리
   const [formData, setFormData] = useState<RegisterInputs>({
     email: "",
+    username: "",
     password: "",
     passwordConfirm: "",
   });
@@ -46,26 +57,31 @@ function Register() {
       options: {
         // username을 raw_user_meta_data 안에 저장
         data: {
-          // username: formData.username,
-          username: "data",
+          username: formData.username,
         },
       },
     });
 
+    if (error) {
+      if (error.status == 422) {
+        setError("🚨 이미 가입된 이메일입니다");
+      }
+
+      if ({ error }.error.message == "Database error saving new user") {
+        setError("🚨 이미 등록된 이름입니다");
+      }
+
+      console.log("error", { error });
+      return;
+    }
+
     if (data) {
       console.log("회원가입 성공", data);
 
-      navigate("/login");
+      setIsSignedUp(true);
+      // navigate("/login");
       return;
     }
-
-    if (error) {
-      console.log("error", error);
-      return;
-    }
-
-    // 회원가입 로직 구현
-    console.log("Register attempt:", formData);
   };
 
   return (
@@ -87,6 +103,19 @@ function Register() {
                 required
                 placeholder="아이디를 입력하세요"
                 value={formData.email}
+                onChange={handleChange}
+                className="w-full"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="username">이름</Label>
+              <Input
+                id="username"
+                name="username"
+                type="text"
+                required
+                placeholder="이름을 입력하세요"
+                value={formData.username}
                 onChange={handleChange}
                 className="w-full"
               />
@@ -139,6 +168,23 @@ function Register() {
           </form>
         </CardContent>
       </Card>
+
+      {isSignedUp && (
+        <Dialog open={isSignedUp} onOpenChange={setIsSignedUp}>
+          <DialogContent className="w-full max-w-md">
+            <DialogTitle className="text-center">회원가입 성공</DialogTitle>
+            <p className="text-center">
+              이메일을 확인하고 인증 버튼을 클릭하세요.
+            </p>
+            <Button
+              className=" bg-emerald-500 hover:bg-emerald-500"
+              onClick={() => navigate("/login")}
+            >
+              로그인 페이지로 이동
+            </Button>
+          </DialogContent>
+        </Dialog>
+      )}
     </div>
   );
 }

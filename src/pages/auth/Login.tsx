@@ -1,9 +1,14 @@
+// Hooks
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+
+// Shadcn UI
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+
+// Supabase
 import supabase from "@/utils/supabase";
 // import type { AuthInputs } from "./types";
 
@@ -55,9 +60,6 @@ function Login() {
       navigate("/");
       return;
     }
-
-    // 로그인 로직 구현
-    console.log("Login attempt:", formData);
   };
 
   return (

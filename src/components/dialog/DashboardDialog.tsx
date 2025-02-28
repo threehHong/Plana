@@ -3,6 +3,7 @@ import { useState } from "react";
 
 // Types
 import { ProgressStatus } from "@/pages/Home";
+import { Tasks } from "@/types";
 
 // Shadcn
 import { Button } from "@/components/ui/button";
@@ -42,7 +43,8 @@ interface DashboardDialogProps {
   setDescription: (description: string) => void;
   progressStatus: ProgressStatus;
   setProgressStatus: (status: ProgressStatus) => void;
-  onCreate: () => void;
+  /* setProgressStatus: React.Dispatch<React.SetStateAction<ProgressStatus | null>>; */
+  createTask: () => void;
 
   progressRate: number;
   setProgressRate: (progressRate: number) => void;
@@ -56,6 +58,13 @@ interface DashboardDialogProps {
   setUsername: (username: string) => void;
   selectedUsernames: string[];
   setSelectedUsernames: React.Dispatch<React.SetStateAction<string[]>>;
+
+  token: string | null;
+
+  selectedTask: Tasks | null;
+  setSelectedTask: React.Dispatch<React.SetStateAction<Tasks | null>>;
+
+  updateTask: (selectedTask: Tasks) => void;
 }
 
 function DashboardDialog({
@@ -67,7 +76,7 @@ function DashboardDialog({
   setDescription,
   progressStatus,
   setProgressStatus,
-  onCreate,
+  createTask,
 
   progressRate,
   setProgressRate,
@@ -81,6 +90,13 @@ function DashboardDialog({
   setUsername,
   selectedUsernames,
   setSelectedUsernames,
+
+  token,
+
+  selectedTask,
+  setSelectedTask,
+
+  updateTask,
 }: DashboardDialogProps) {
   const [calendarOpen, setCalendarOpen] = useState<boolean>(false);
   const handleUsernameChange = (value: string) => {
@@ -94,15 +110,19 @@ function DashboardDialog({
 
   return (
     <Dialog open={open} onOpenChange={setOpen} modal={false}>
-      <DialogTrigger className="w-40 items-center py-2 border border-transparent text-sm font-bold rounded-md shadow-sm text-white bg-emerald-500 hover:bg-emerald-500">
-        + 새 프로젝트
+      <DialogTrigger
+        className="w-40 h-9 items-center py-2 border border-transparent text-sm font-bold rounded-md shadow-sm text-white bg-emerald-500 hover:bg-emerald-500"
+        onClick={() => setSelectedTask(null)}
+      >
+        새 프로젝트
       </DialogTrigger>
       {/* <DialogContent className="max-w-fit"> */}
       {/* max-w-7xl mx-auto py-6 px-3 sm:px-6 lg:px-8" */}
+
       <DialogContent className="sm:max-w-[500px] max-w-[440px] [&>button]:hidden">
         <DialogHeader>
           <DialogTitle className="text-xl font-bold mb-4">
-            새 프로젝트 생성
+            {selectedTask ? "프로젝트 수정" : "새 프로젝트 생성"}
           </DialogTitle>
         </DialogHeader>
         {/* <div className="flex items-center justify-between mb-2">
@@ -153,24 +173,27 @@ function DashboardDialog({
             </Select>
           </div>
 
-          <div className="grid gap-2">
-            <Label htmlFor="team">팀원</Label>
-            <Select value={username} onValueChange={handleUsernameChange}>
-              <SelectTrigger id="team">
-                <SelectValue placeholder="팀원 선택">
-                  {selectedUsernames.length > 0 && selectedUsernames.join(", ")}
-                </SelectValue>
-              </SelectTrigger>
-              <SelectContent>
-                {usernameList?.map((user, index) => (
-                  <SelectItem key={index} value={user.username}>
-                    {user.username}
-                    {selectedUsernames.includes(user.username) ? " ✅" : null}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+          {token && (
+            <div className="grid gap-2">
+              <Label htmlFor="team">팀원</Label>
+              <Select value={username} onValueChange={handleUsernameChange}>
+                <SelectTrigger id="team">
+                  <SelectValue placeholder="팀원 선택">
+                    {selectedUsernames.length > 0 &&
+                      selectedUsernames.join(", ")}
+                  </SelectValue>
+                </SelectTrigger>
+                <SelectContent>
+                  {usernameList?.map((user, index) => (
+                    <SelectItem key={index} value={user.username}>
+                      {user.username}
+                      {selectedUsernames.includes(user.username) ? " ✅" : null}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
 
           <div className="grid gap-2">
             <Label htmlFor="progressRate">진행률 (%)</Label>
@@ -186,17 +209,19 @@ function DashboardDialog({
             />
           </div>
 
-          <div className="grid gap-2">
-            <Label htmlFor="memberCount">팀원 수</Label>
-            <Input
-              id="memberCount"
-              type="number"
-              min="1"
-              value={memberCount}
-              onChange={(e) => setMemberCount(Number(e.target.value))}
-              className="w-full"
-            />
-          </div>
+          {!token && (
+            <div className="grid gap-2">
+              <Label htmlFor="memberCount">팀원 수</Label>
+              <Input
+                id="memberCount"
+                type="number"
+                min="1"
+                value={memberCount}
+                onChange={(e) => setMemberCount(Number(e.target.value))}
+                className="w-full"
+              />
+            </div>
+          )}
 
           <div className="grid gap-2">
             <Label htmlFor="dueDate">마감일</Label>
@@ -241,7 +266,8 @@ function DashboardDialog({
           <DialogClose asChild>
             <Button
               variant="ghost"
-              className="font-normal border border-gray-400 text-gray-400 hover:bg-gray-50 hover:text-gray-500"
+              className="font-normal border border-gray-300 text-gray-400 hover:bg-gray-50 hover:text-gray-500"
+              onClick={() => setOpen(false)}
             >
               Cancel
             </Button>
@@ -249,9 +275,9 @@ function DashboardDialog({
           <Button
             type="submit"
             className="font-normal border-orange-500 text-white hover:text-white bg-emerald-500 hover:bg-emerald-600"
-            onClick={onCreate}
+            onClick={selectedTask ? () => updateTask(selectedTask) : createTask}
           >
-            Done
+            {selectedTask ? "Edit" : " Done"}
           </Button>
         </DialogFooter>
       </DialogContent>

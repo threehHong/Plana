@@ -9,4 +9,6 @@ export interface Tasks {
   progress_status: string;
   member_count: number;
   member_avatar: string[];
+  member_names: string[];
+  user_id: string;
 }

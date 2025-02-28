@@ -33,13 +33,12 @@ function Header() {
         {/* 알림 아이콘 */}
         <div className="flex items-center space-x-4 mr-2">
           {/* 알림 아이콘 */}
-          <div className="relative">
+          {/* <div className="relative">
             <FaBell className="h-6 w-6 text-gray-700" />
-            {/* 알림 배지 */}
             <span className="absolute top-0 right-0 flex items-center justify-center w-3 h-3 bg-red-500 text-white text-xs rounded-full">
               3
             </span>
-          </div>
+          </div> */}
 
           {/* 프로필 이미지 */}
           <div className="relative w-8 h-8">

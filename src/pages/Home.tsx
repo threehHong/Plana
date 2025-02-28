@@ -3,6 +3,7 @@ import supabase from "@/utils/supabase";
 
 // Hooks
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 
 // Types
 import { Tasks } from "@/types";
@@ -26,8 +27,16 @@ export enum ProgressStatus {
 }
 
 function Home() {
+  const navigate = useNavigate();
   const [open, setOpen] = useState<boolean>(false);
+  const [isMyPosts, setIsMyPosts] = useState<boolean>(true);
+
   const [tasks, setTasks] = useState<Tasks[] | undefined | null>([]);
+
+  // const token = useAuthStore((state) => state.token);
+  const { token } = useAuthStore();
+
+  /* 프로젝트 생성 */
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [progressStatus, setProgressStatus] = useState<ProgressStatus>(
@@ -37,43 +46,44 @@ function Home() {
   const [memberCount, setMemberCount] = useState<number>(0);
   const [deadline, setDeadline] = useState<Date | undefined>(undefined);
 
-  // const token = useAuthStore((state) => state.token);
-  const { token } = useAuthStore();
-  const [isMyPosts, setIsMyPosts] = useState<boolean>(true);
-
   const [usernameList, setUsernameList] = useState<{ username: string }[]>([]);
   const [username, setUsername] = useState("");
   const [selectedUsernames, setSelectedUsernames] = useState<string[]>([]);
 
-  const onCreate = async () => {
-    let memberAvatar: string[] = [];
+  const [loggedInUserId, setLoggedInUserId] = useState<
+    string | undefined | null
+  >(null);
 
-    switch (true) {
-      case memberCount >= 3:
-        memberAvatar = [
-          "https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp",
-          "https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp",
-          "https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp",
-          /* "https://randomuser.me/api/portraits/men/1.jpg",
-          "https://randomuser.me/api/portraits/women/2.jpg",
-          "https://randomuser.me/api/portraits/men/3.jpg", */
-        ];
-        break;
-      case memberCount == 2:
-        memberAvatar = [
-          "https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp",
-          "https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp",
-        ];
-        break;
-      case memberCount == 1:
-        memberAvatar = [
-          "https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp",
-        ];
-        break;
-      default:
-        memberAvatar = [""];
-    }
+  const [selectedTask, setSelectedTask] = useState<Tasks | null>(null);
 
+  const resetDialogFields = () => {
+    getTasks();
+    setOpen(false);
+    setTitle("");
+    setDescription("");
+    setProgressStatus(ProgressStatus.BEFORE);
+    setProgressRate(0);
+    setMemberCount(0);
+    setDeadline(undefined);
+  };
+
+  const handleOpenEditDialog = (task: Tasks) => {
+    console.log("task", task.member_names);
+    setSelectedTask(task);
+
+    setTitle(task.title);
+    setDescription(task.description);
+    setProgressStatus(task.progress_status as ProgressStatus);
+    setUsername(task.member_names[0]);
+    setSelectedUsernames(task.member_names);
+    setProgressRate(Number(task.progress_rate));
+    setMemberCount(task.member_count);
+    setDeadline(task.deadline);
+
+    setOpen(true);
+  };
+
+  const createTask = async () => {
     const user = await supabase.auth.getUser();
 
     if (user.data.user) {
@@ -93,7 +103,6 @@ function Home() {
           deadline: deadline,
 
           created_at: new Date(),
-          member_avatar: memberAvatar,
           user_id: userId,
 
           member_names: selectedUsernames,
@@ -106,23 +115,15 @@ function Home() {
 
       if (status === 201) {
         // console.log("생성 완료");
-        getDashboardTasks();
-        setOpen(false);
-        setTitle("");
-        setDescription("");
-        setProgressStatus(ProgressStatus.BEFORE);
-        setProgressRate(0);
-        setMemberCount(0);
-        setDeadline(undefined);
+        resetDialogFields();
       }
     }
   };
 
-  const getDashboardTasks = async (myPost = false) => {
-    // const user = supabase.auth.getUser();
+  const getTasks = async (myPost = false) => {
     const { data: user } = await supabase.auth.getUser();
 
-    // console.log("user", user);
+    setLoggedInUserId(user.user?.id);
 
     try {
       let query = supabase.from("tasks").select("*");
@@ -139,20 +140,71 @@ function Home() {
         console.log(myPost ? "나의 게시물:" : "전체 게시물:", data);
         setTasks(data);
       }
-    } catch (err) {
-      console.error("오류 발생:", err);
+    } catch (error) {
+      console.error("오류 발생:", error);
     }
 
     const { data } = await supabase.from("users").select("username");
     setUsernameList(data || []);
   };
 
+  const deleteTask = async (taskId: number, loggedInUserId: string) => {
+    try {
+      let query = supabase.from("tasks").delete();
+
+      if (loggedInUserId) {
+        query = query.match({ id: taskId, user_id: loggedInUserId });
+      } else {
+        query = query.eq("id", taskId);
+      }
+      const { status, error } = await query;
+
+      if (error) {
+        console.log("게시물 삭제 오류:", error);
+      } else {
+        console.log("게시물 삭제 완료:", status);
+        getTasks();
+      }
+    } catch (error) {
+      console.error("오류 발생:", error);
+    }
+  };
+
+  const updateTask = async (tasks: Tasks) => {
+    try {
+      const { status, error } = await supabase
+        .from("tasks")
+        .update({
+          title: title,
+          description: description,
+          progress_status: progressStatus,
+          member_names: selectedUsernames,
+          progress_rate: progressRate,
+          member_count: memberCount,
+          deadline: deadline,
+
+          updated_at: new Date(),
+          // user_id: userId,
+        })
+        .eq("id", tasks.id);
+
+      if (error) {
+        console.log("게시물 수정 오류:", error);
+      } else {
+        console.log("게시물 수정정 완료:", status);
+        resetDialogFields();
+      }
+    } catch (error) {
+      console.error("오류 발생:", error);
+    }
+  };
+
   useEffect(() => {
-    getDashboardTasks();
+    getTasks();
   }, [token]);
 
   return (
-    <div className="w-full h-[93vh] bg-gray-50">
+    <div className="w-full h-screen bg-gray-50">
       <div className="max-w-7xl mx-auto py-6 px-3 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between mb-6">
           {/* type="search를 생성해야 텍스트 작성시 x 표시 생성" */}
@@ -162,21 +214,23 @@ function Home() {
             placeholder="프로젝트 검색"
           />
 
-          {token && (
-            <Button
-              className={`${
-                isMyPosts
-                  ? "bg-teal-500 hover:bg-teal-500"
-                  : "bg-teal-600 hover:bg-teal-600"
-              } mr-3 font-bold`}
-              onClick={() => {
-                getDashboardTasks(isMyPosts);
+          <Button
+            className={`${
+              isMyPosts
+                ? "bg-teal-500 hover:bg-teal-500"
+                : "bg-teal-600 hover:bg-teal-600"
+            } mr-3 font-bold w-28 h-9`}
+            onClick={() => {
+              if (token) {
+                getTasks(isMyPosts);
                 setIsMyPosts(!isMyPosts);
-              }}
-            >
-              {isMyPosts ? "나의 프로젝트" : "전체 프로젝트"}
-            </Button>
-          )}
+              } else {
+                navigate("/login");
+              }
+            }}
+          >
+            {isMyPosts ? "나의 프로젝트" : "전체 프로젝트"}
+          </Button>
 
           <DashboardDialog
             open={open}
@@ -193,18 +247,32 @@ function Home() {
             setMemberCount={setMemberCount}
             deadline={deadline}
             setDeadline={setDeadline}
-            onCreate={onCreate}
+            createTask={createTask}
             usernameList={usernameList}
             username={username}
             setUsername={setUsername}
             selectedUsernames={selectedUsernames}
             setSelectedUsernames={setSelectedUsernames}
+            token={token}
+            selectedTask={selectedTask}
+            setSelectedTask={setSelectedTask}
+            updateTask={updateTask}
           />
         </div>
 
-        {tasks?.map((task: Tasks) => {
-          return <DashboardCard key={task.id} data={task} />;
-        })}
+        <div>
+          {tasks?.map((task: Tasks) => {
+            return (
+              <DashboardCard
+                key={task.id}
+                data={task}
+                loggedInUserId={loggedInUserId}
+                deleteTask={deleteTask}
+                handleOpenEditDialog={handleOpenEditDialog}
+              />
+            );
+          })}
+        </div>
       </div>
     </div>
   );

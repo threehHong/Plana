@@ -243,7 +243,7 @@ function DashboardDialog({
                   {deadline ? (
                     format(deadline, "yyyy-MM-dd")
                   ) : (
-                    <span>날자를 선택하세요.</span>
+                    <span>날짜를 선택하세요.</span>
                   )}
                 </Button>
               </PopoverTrigger>

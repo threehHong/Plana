@@ -29,7 +29,7 @@ export enum ProgressStatus {
 function Home() {
   const navigate = useNavigate();
   const [open, setOpen] = useState<boolean>(false);
-  const [isMyPosts, setIsMyPosts] = useState<boolean>(true);
+  const [isMyPosts, setIsMyPosts] = useState<boolean>(false);
 
   const [tasks, setTasks] = useState<Tasks[] | undefined | null>([]);
 
@@ -55,6 +55,8 @@ function Home() {
   >(null);
 
   const [selectedTask, setSelectedTask] = useState<Tasks | null>(null);
+
+  const [searcValue, setSearchValue] = useState<string>("");
 
   const resetDialogFields = () => {
     getTasks();
@@ -132,6 +134,11 @@ function Home() {
         query = query.eq("user_id", user.user.id);
       }
 
+      // 검색어가 있는 경우 제목으로 필터링 추가
+      if (searcValue) {
+        query = query.ilike("title", `%${searcValue}%`);
+      }
+
       const { data, error } = await query;
 
       if (error) {
@@ -199,9 +206,24 @@ function Home() {
     }
   };
 
+  const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setSearchValue(e.target.value);
+  };
+
   useEffect(() => {
+    console.log("1");
     getTasks();
   }, [token]);
+
+  // 검색어가 변경될 때 실행 (디바운싱)
+  // 디바운스 : 빠른 입력에 반응하여 불필요한 연속 작업을 방지하고, 입력이 끝난 후 일정 시간이 지나면 작업을 실행하는 프로그래밍 기술(setTimeout을 사용하여 디바운스 처리)
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      getTasks(isMyPosts);
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [searcValue /* isMyPosts */]);
 
   return (
     <div className="w-full h-screen bg-gray-50">
@@ -212,24 +234,26 @@ function Home() {
             type="search"
             className="rounded-md"
             placeholder="프로젝트 검색"
+            value={searcValue}
+            onChange={handleSearch}
           />
 
           <Button
             className={`${
-              isMyPosts
+              !isMyPosts
                 ? "bg-teal-500 hover:bg-teal-500"
                 : "bg-teal-600 hover:bg-teal-600"
             } mr-3 font-bold w-28 h-9`}
             onClick={() => {
               if (token) {
-                getTasks(isMyPosts);
+                getTasks(!isMyPosts);
                 setIsMyPosts(!isMyPosts);
               } else {
                 navigate("/login");
               }
             }}
           >
-            {isMyPosts ? "나의 프로젝트" : "전체 프로젝트"}
+            {!isMyPosts ? "나의 프로젝트" : "전체 프로젝트"}
           </Button>
 
           <DashboardDialog

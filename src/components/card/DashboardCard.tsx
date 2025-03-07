@@ -102,7 +102,7 @@ function DashboardCard({
         </button> */}
       </div>
       <p className="my-3 text-sm text-gray-600">
-        {data.progress_status} • 마감일 D
+        {data.progress_status} • 마감일 D-
         {data.deadline ? new Date(data.deadline).getDate() - currentDate : 0}
       </p>
       <p className="text-gray-700 my-4 text-sm">{data.description}</p>
